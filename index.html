@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pong Game!</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: black;
+        }
+
+        canvas {
+            border: 2px solid white;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="pongCanvas" width="1024" height="768"></canvas>
+
+    <script>
+        const canvas = document.getElementById("pongCanvas");
+        const ctx = canvas.getContext("2d");
+
+        // Game variables
+        const paddleWidth = 20, paddleHeight = 120;
+        let leftPaddleY = (canvas.height - paddleHeight) / 2;
+        let rightPaddleY = (canvas.height - paddleHeight) / 2;
+        const paddleSpeed = 10;
+
+        let ballX = canvas.width / 2;
+        let ballY = canvas.height / 2;
+        const ballRadius = 10;
+        let ballSpeedX = 5;
+        let ballSpeedY = 3;
+        const speedIncrement = 0.5;
+
+        let leftScore = 0;
+        let rightScore = 0;
+        let paused = true;
+        let goalPause = true;
+        let showGoalText = false;
+        let goalTextScale = 0;
+        let goalTextOpacity = 0;
+
+        let sparkles = []; // Array to hold the sparkles
+        let sparkleTimeout; // Timeout to clear sparkles after goal
+
+        // Keyboard controls
+        let upPressed = false;
+        let downPressed = false;
+        let wPressed = false;
+        let sPressed = false;
+
+        // Draw paddles
+        function drawPaddle(x, y, color) {
+            ctx.fillStyle = color;
+            ctx.fillRect(x, y, paddleWidth, paddleHeight);
+        }
+
+        // Draw ball
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+            ctx.fillStyle = "white";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        // Draw score
+        function drawScore() {
+            ctx.font = "30px Arial";
+            ctx.fillStyle = "white";
+            ctx.fillText(leftScore, canvas.width / 4, 50);
+            ctx.fillText(rightScore, (canvas.width * 3) / 4, 50);
+        }
+
+        // Draw help text
+        function drawHelpText() {
+            ctx.font = "20px Arial";
+            ctx.fillStyle = "white";
+            ctx.fillText("Press SPACE to start", canvas.width / 2 - 100, canvas.height / 2);
+            ctx.fillText("Press ESC to pause", canvas.width / 2 - 95, canvas.height / 2 + 30);
+        }
+
+        // Draw "GOAL!" text with zoom and fade effect
+        function drawGoalText() {
+            if (showGoalText) {
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2);
+                ctx.scale(goalTextScale, goalTextScale);
+                ctx.globalAlpha = goalTextOpacity;
+                ctx.fillStyle = "yellow";
+                ctx.font = "bold 80px Arial";
+                ctx.fillText("GOAL!", -150, 0);
+                ctx.restore();
+
+                // Animate the scale and opacity
+                if (goalTextScale < 1.5) {
+                    goalTextScale += 0.05; // Zoom in
+                }
+                if (goalTextOpacity < 1) {
+                    goalTextOpacity += 0.05; // Fade in
+                }
+            }
+        }
+
+        // Create sparkles
+        function createSparkles(x, y, color) {
+            for (let i = 0; i < 50; i++) {
+                sparkles.push({
+                    x: x,
+                    y: y,
+                    size: Math.random() * 10,
+                    speedX: (Math.random() - 0.5) * 5,
+                    speedY: (Math.random() - 0.5) * 5,
+                    color: color,
+                    life: 200,
+                });
+            }
+        }
+
+        // Draw sparkles
+        function drawSparkles() {
+            for (let i = 0; i < sparkles.length; i++) {
+                const sparkle = sparkles[i];
+                ctx.fillStyle = sparkle.color;
+                ctx.fillRect(sparkle.x, sparkle.y, sparkle.size, sparkle.size);
+                sparkle.x += sparkle.speedX;
+                sparkle.y += sparkle.speedY;
+                sparkle.life -= 2;
+
+                // Remove sparkle if its life is over
+                if (sparkle.life <= 0) {
+                    sparkles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        // Move paddles
+        function movePaddles() {
+            if (wPressed && leftPaddleY > 0) {
+                leftPaddleY -= paddleSpeed;
+            } else if (sPressed && leftPaddleY < canvas.height - paddleHeight) {
+                leftPaddleY += paddleSpeed;
+            }
+
+            if (upPressed && rightPaddleY > 0) {
+                rightPaddleY -= paddleSpeed;
+            } else if (downPressed && rightPaddleY < canvas.height - paddleHeight) {
+                rightPaddleY += paddleSpeed;
+            }
+        }
+
+        // Move ball
+        function moveBall() {
+            ballX += ballSpeedX;
+            ballY += ballSpeedY;
+
+            // Ball collision with top and bottom walls
+            if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
+                ballSpeedY = -ballSpeedY;
+            }
+
+            // Ball collision with paddles
+            if (
+                ballX - ballRadius < paddleWidth &&
+                ballY > leftPaddleY &&
+                ballY < leftPaddleY + paddleHeight
+            ) {
+                ballSpeedX = -ballSpeedX;
+            } else if (ballX + ballRadius > canvas.width - paddleWidth &&
+                ballY > rightPaddleY &&
+                ballY < rightPaddleY + paddleHeight) {
+                ballSpeedX = -ballSpeedX;
+            }
+
+            // Left player scores
+            if (ballX + ballRadius < 0) {
+                rightScore++;
+                createSparkles(0, ballY, "blue");
+                showGoalText = true;
+                goalTextScale = 0;
+                goalTextOpacity = 0;
+                resetBall();
+            }
+
+            // Right player scores
+            if (ballX - ballRadius > canvas.width) {
+                leftScore++;
+                createSparkles(canvas.width, ballY, "red");
+                showGoalText = true;
+                goalTextScale = 0;
+                goalTextOpacity = 0;
+                resetBall();
+            }
+        }
+
+        // Reset the ball after a score
+        function resetBall() {
+            ballX = canvas.width / 2;
+            ballY = canvas.height / 2;
+
+            // Increase speed after each goal
+            ballSpeedX = ballSpeedX > 0 ? ballSpeedX + speedIncrement : ballSpeedX - speedIncrement;
+            ballSpeedY = ballSpeedY > 0 ? ballSpeedY + speedIncrement : ballSpeedY - speedIncrement;
+
+            ballSpeedX = -ballSpeedX; // Change ball direction after each goal
+            paused = true;
+            goalPause = true; // Set to true so that the game waits for space to continue
+
+            // Clear sparkles after a short duration
+            clearTimeout(sparkleTimeout);
+            sparkleTimeout = setTimeout(() => {
+                sparkles = [];
+            }, 1000);
+
+            setTimeout(() => {
+                showGoalText = false;
+            }, 2000); // Goal text disappears after 2 seconds
+        }
+
+        // Draw everything
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            drawPaddle(0, leftPaddleY, "blue"); // Left paddle (blue)
+            drawPaddle(canvas.width - paddleWidth, rightPaddleY, "red"); // Right paddle (red)
+            drawBall();
+            drawScore();
+            drawSparkles();
+            drawGoalText();
+
+            if (paused && !goalPause) {
+                drawHelpText();
+            }
+        }
+
+        // Game loop
+        function gameLoop() {
+            if (!paused) {
+                movePaddles();
+                moveBall();
+            }
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Keyboard events
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Up" || e.key === "ArrowUp") {
+                upPressed = true;
+            }
+            if (e.key === "Down" || e.key === "ArrowDown") {
+                downPressed = true;
+            }
+            if (e.key === "w") {
+                wPressed = true;
+            }
+            if (e.key === "s") {
+                sPressed = true;
+            }
+            if (e.key === "Escape") {
+                paused = !paused; // Toggle pause when ESC is pressed
+            }
+            if (e.key === " " && goalPause) {
+                paused = false; // Resume after goal if space is pressed
+                goalPause = false;
+            }
+        });
+
+        document.addEventListener("keyup", function (e) {
+            if (e.key === "Up" || e.key === "ArrowUp") {
+                upPressed = false;
+            }
+            if (e.key === "Down" || e.key === "ArrowDown") {
+                downPressed = false;
+            }
+            if (e.key === "w") {
+                wPressed = false;
+            }
+            if (e.key === "s") {
+                sPressed = false;
+            }
+        });
+
+        // Start the game loop
+        gameLoop();
+    </script>
+</body>
+
+</html>
