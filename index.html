@@ -132,6 +132,19 @@
             if (goalTextOpacity < 1) {
                 goalTextOpacity += 0.05; // Fade in
             }
+
+            // Show message to press R to restart the game
+            setTimeout(() => {
+                ctx.save();
+                ctx.translate(canvas.width / 2, canvas.height / 2 + 50);
+                ctx.scale(goalTextScale, goalTextScale);
+                ctx.globalAlpha = goalTextOpacity;
+                ctx.fillStyle = "white";
+                ctx.font = "bold 20px Arial";
+                ctx.textAlign = "center";
+                ctx.fillText("Press R to start a new game", 0, 0);
+                ctx.restore();
+            }, 3000);
         }
 
         // Create sparkles
@@ -312,6 +325,25 @@
             if (e.key === " " && goalPause && !gameOver) {
                 paused = false;
                 goalPause = false;
+            }
+            if (e.key === "r" && gameOver) {
+                // Reset game state variables
+                leftScore = 0;
+                rightScore = 0;
+                gameOver = false;
+                winner = "";
+                paused = true;
+                goalPause = true;
+                ballSpeedX = 5;
+                ballSpeedY = 3;
+                ballX = canvas.width / 2;
+                ballY = canvas.height / 2;
+                leftPaddleY = (canvas.height - paddleHeight) / 2;
+                rightPaddleY = (canvas.height - paddleHeight) / 2;
+                sparkles = [];
+                showGoalText = false;
+                goalTextScale = 0;
+                goalTextOpacity = 0;
             }
         });
 

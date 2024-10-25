@@ -21,3 +21,4 @@ Just open the `index.html` file in your browser.
 
 - Player 1 controls the left paddle with the `W` and `S` keys.
 - Player 2 controls the right paddle with the `UP` and `DOWN` arrow keys.
+- After a game is finished, press the `R` key to start a new game.
