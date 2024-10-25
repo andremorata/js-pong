@@ -33,6 +33,7 @@
         let leftPaddleY = (canvas.height - paddleHeight) / 2;
         let rightPaddleY = (canvas.height - paddleHeight) / 2;
         const paddleSpeed = 10;
+        const maxScore = 3;
 
         let ballX = canvas.width / 2;
         let ballY = canvas.height / 2;
@@ -48,6 +49,8 @@
         let showGoalText = false;
         let goalTextScale = 0;
         let goalTextOpacity = 0;
+        let gameOver = false;
+        let winner = "";
 
         let sparkles = []; // Array to hold the sparkles
         let sparkleTimeout; // Timeout to clear sparkles after goal
@@ -111,6 +114,26 @@
             }
         }
 
+        // Draw winning message
+        function drawWinMessage() {
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2);
+            ctx.scale(goalTextScale, goalTextScale);
+            ctx.globalAlpha = goalTextOpacity;
+            ctx.fillStyle = winner === "LEFT PLAYER" ? "blue" : "red";
+            ctx.font = "bold 30px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText(winner + " WINS!", 0, 0);
+            ctx.restore();
+
+            if (goalTextScale < 2) {
+                goalTextScale += 0.05; // Zoom in
+            }
+            if (goalTextOpacity < 1) {
+                goalTextOpacity += 0.05; // Fade in
+            }
+        }
+
         // Create sparkles
         function createSparkles(x, y, color) {
             for (let i = 0; i < 50; i++) {
@@ -136,7 +159,6 @@
                 sparkle.y += sparkle.speedY;
                 sparkle.life -= 2;
 
-                // Remove sparkle if its life is over
                 if (sparkle.life <= 0) {
                     sparkles.splice(i, 1);
                     i--;
@@ -164,12 +186,10 @@
             ballX += ballSpeedX;
             ballY += ballSpeedY;
 
-            // Ball collision with top and bottom walls
             if (ballY + ballRadius > canvas.height || ballY - ballRadius < 0) {
                 ballSpeedY = -ballSpeedY;
             }
 
-            // Ball collision with paddles
             if (
                 ballX - ballRadius < paddleWidth &&
                 ballY > leftPaddleY &&
@@ -185,21 +205,40 @@
             // Left player scores
             if (ballX + ballRadius < 0) {
                 rightScore++;
-                createSparkles(0, ballY, "blue");
-                showGoalText = true;
-                goalTextScale = 0;
-                goalTextOpacity = 0;
-                resetBall();
+                checkGameOver();
+                if (!gameOver) {
+                    createSparkles(0, ballY, "blue");
+                    showGoalText = true;
+                    goalTextScale = 0;
+                    goalTextOpacity = 0;
+                    resetBall();
+                }
             }
 
             // Right player scores
             if (ballX - ballRadius > canvas.width) {
                 leftScore++;
-                createSparkles(canvas.width, ballY, "red");
-                showGoalText = true;
-                goalTextScale = 0;
-                goalTextOpacity = 0;
-                resetBall();
+                checkGameOver();
+                if (!gameOver) {
+                    createSparkles(canvas.width, ballY, "red");
+                    showGoalText = true;
+                    goalTextScale = 0;
+                    goalTextOpacity = 0;
+                    resetBall();
+                }
+            }
+        }
+
+        // Check if a player has won
+        function checkGameOver() {
+            if (leftScore >= maxScore) {
+                gameOver = true;
+                winner = "BLUE PLAYER";
+                createSparkles(canvas.width / 2, canvas.height / 2, "blue");
+            } else if (rightScore >= maxScore) {
+                gameOver = true;
+                winner = "RED PLAYER";
+                createSparkles(canvas.width / 2, canvas.height / 2, "red");
             }
         }
 
@@ -207,16 +246,12 @@
         function resetBall() {
             ballX = canvas.width / 2;
             ballY = canvas.height / 2;
-
-            // Increase speed after each goal
             ballSpeedX = ballSpeedX > 0 ? ballSpeedX + speedIncrement : ballSpeedX - speedIncrement;
             ballSpeedY = ballSpeedY > 0 ? ballSpeedY + speedIncrement : ballSpeedY - speedIncrement;
-
-            ballSpeedX = -ballSpeedX; // Change ball direction after each goal
+            ballSpeedX = -ballSpeedX;
             paused = true;
-            goalPause = true; // Set to true so that the game waits for space to continue
+            goalPause = true;
 
-            // Clear sparkles after a short duration
             clearTimeout(sparkleTimeout);
             sparkleTimeout = setTimeout(() => {
                 sparkles = [];
@@ -224,28 +259,32 @@
 
             setTimeout(() => {
                 showGoalText = false;
-            }, 2000); // Goal text disappears after 2 seconds
+            }, 2000);
         }
 
         // Draw everything
         function draw() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            drawPaddle(0, leftPaddleY, "blue"); // Left paddle (blue)
-            drawPaddle(canvas.width - paddleWidth, rightPaddleY, "red"); // Right paddle (red)
+            drawPaddle(0, leftPaddleY, "blue");
+            drawPaddle(canvas.width - paddleWidth, rightPaddleY, "red");
             drawBall();
             drawScore();
             drawSparkles();
-            drawGoalText();
 
-            if (paused && !goalPause) {
-                drawHelpText();
+            if (gameOver) {
+                drawWinMessage();
+            } else {
+                drawGoalText();
+                if (paused && !goalPause) {
+                    drawHelpText();
+                }
             }
         }
 
         // Game loop
         function gameLoop() {
-            if (!paused) {
+            if (!paused && !gameOver) {
                 movePaddles();
                 moveBall();
             }
@@ -268,10 +307,10 @@
                 sPressed = true;
             }
             if (e.key === "Escape") {
-                paused = !paused; // Toggle pause when ESC is pressed
+                paused = !paused && !gameOver;
             }
-            if (e.key === " " && goalPause) {
-                paused = false; // Resume after goal if space is pressed
+            if (e.key === " " && goalPause && !gameOver) {
+                paused = false;
                 goalPause = false;
             }
         });
