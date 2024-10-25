@@ -120,7 +120,7 @@
             ctx.translate(canvas.width / 2, canvas.height / 2);
             ctx.scale(goalTextScale, goalTextScale);
             ctx.globalAlpha = goalTextOpacity;
-            ctx.fillStyle = winner === "LEFT PLAYER" ? "blue" : "red";
+            ctx.fillStyle = winner === "BLUE PLAYER" ? "blue" : "red";
             ctx.font = "bold 30px Arial";
             ctx.textAlign = "center";
             ctx.fillText(winner + " WINS!", 0, 0);
@@ -133,18 +133,16 @@
                 goalTextOpacity += 0.05; // Fade in
             }
 
-            // Show message to press R to restart the game
-            setTimeout(() => {
-                ctx.save();
-                ctx.translate(canvas.width / 2, canvas.height / 2 + 50);
-                ctx.scale(goalTextScale, goalTextScale);
-                ctx.globalAlpha = goalTextOpacity;
-                ctx.fillStyle = "white";
-                ctx.font = "bold 20px Arial";
-                ctx.textAlign = "center";
-                ctx.fillText("Press R to start a new game", 0, 0);
-                ctx.restore();
-            }, 3000);
+            ctx.save();
+            ctx.translate(canvas.width / 2, canvas.height / 2 + 200);
+            ctx.scale(goalTextScale, goalTextScale);
+            ctx.globalAlpha = goalTextOpacity;
+            ctx.fillStyle = "white";
+            ctx.font = "10px Arial";
+            ctx.textAlign = "center";
+            ctx.fillText("Press R to start a new game", 0, 0);
+            ctx.restore();
+
         }
 
         // Create sparkles
